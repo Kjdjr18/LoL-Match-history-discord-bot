@@ -1,0 +1,2 @@
+# This is the git ignore file. Any files referenced in this file will not be pushed to github. Keep secrets and private keys in these files or any junk files that are not needed.
+.env
