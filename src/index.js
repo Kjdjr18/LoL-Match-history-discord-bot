@@ -96,7 +96,7 @@ client.on("interactionCreate", async (interaction) => {
               damageDealt
             );
             let outcome = participant.win ? "Victory" : "Defeat";
-            const pentakills = participant.pentakills || 0;
+            const pentakills = participant.pentaKills;
 
             // Create a formatted string for the match
             const formattedMatch = `${outcome}       ${championName}       ${kills}/${deaths}/${assists}      ${formattedDamageDealt}          ${pentakills}`;
