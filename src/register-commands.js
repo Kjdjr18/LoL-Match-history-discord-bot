@@ -38,5 +38,3 @@ const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN); //
     console.log(`There was an error: ${error}`);
   }
 })();
-
-module.exports = { commands };

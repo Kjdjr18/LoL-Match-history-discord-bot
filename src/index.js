@@ -1,11 +1,11 @@
 const { Client, IntentsBitField } = require("discord.js");
 const axios = require("axios");
 require("dotenv").config({ path: "../.env" });
-const { commands } = require("./register-commands");
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const RIOT_API_KEY = process.env.RIOT_API_KEY;
-const region = "americas";
+const region1 = "na1"; //This is the region variable for before you have the puuid
+const region = "americas"; //This is the region variable for after you have the puuid
 
 const client = new Client({
   intents: [
@@ -16,13 +16,16 @@ const client = new Client({
   ],
 });
 
+// Helper function to convert seconds to MM:SS format
 function secondsToMinutesAndSeconds(seconds) {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
   return `${minutes}:${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}`;
 }
 
-client.once("ready", () => console.log(`Logged in as ${client.user.tag}`));
+client.once("ready", () => {
+  console.log(`Logged in as ${client.user.tag}`);
+});
 
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
@@ -31,15 +34,13 @@ client.on("interactionCreate", async (interaction) => {
     const customString = interaction.options.getString("summoner");
 
     try {
-      // First, fetch the user's summoner data to get the puuid
       const summonerResponse = await axios.get(
-        `https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/${customString}`,
+        `https://${region1}.api.riotgames.com/lol/summoner/v4/summoners/by-name/${customString}`,
         { headers: { "X-Riot-Token": RIOT_API_KEY } }
       );
 
       const userPuuid = summonerResponse.data.puuid;
 
-      // Now that you have the puuid, proceed to fetch the match history
       const response = await axios.get(
         `https://${region}.api.riotgames.com/lol/match/v5/matches/by-puuid/${userPuuid}/ids?start=0&count=10`,
         { headers: { "X-Riot-Token": RIOT_API_KEY } }
@@ -120,14 +121,22 @@ client.on("interactionCreate", async (interaction) => {
         )}`
       );
     } catch (error) {
-      if (error.response && error.response.status === 404) {
-        // The summoner name is not valid
-        await interaction.reply("Not a valid summoner name");
+      if (error.response) {
+        if (error.response.status === 404) {
+          // The summoner name is not valid
+          await interaction.reply("Not a valid summoner name");
+        } else {
+          // Handle other errors gracefully, you might want to log these
+          console.error("Error fetching summoner data:", error);
+          await interaction.followUp(
+            "An error occurred while fetching summoner data."
+          );
+        }
       } else {
-        // Other error occurred
-        console.error("Error fetching summoner data:", error);
+        // Handle network errors, for example, when Riot API is down
+        console.error("Network error:", error);
         await interaction.followUp(
-          "An error occurred while fetching summoner data."
+          "A network error occurred. Please try again later."
         );
       }
     }
