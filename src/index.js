@@ -79,11 +79,11 @@ client.on("interactionCreate", async (interaction) => {
       // Define column headers and corresponding widths
       const columns = [
         { header: "W/L", width: 3 },
-        { header: "Mode", width: 10 },
+        { header: "Game Mode", width: 10 },
         { header: "Champion", width: 10 },
         { header: "K/D/A", width: 8 },
         { header: "Damage", width: 8 },
-        { header: "Time", width: 6 },
+        { header: "Duration", width: 6 },
         { header: "Pentas", width: 1 },
       ];
 
