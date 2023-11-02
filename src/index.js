@@ -89,7 +89,7 @@ client.on("interactionCreate", async (interaction) => {
         { header: "Game Mode", width: 10 },
         { header: "Champion", width: 12 },
         { header: "K/D/A", width: 8 },
-        { header: "Damage", width: 8 },
+        { header: "Damage", width: 7 },
         { header: "Duration", width: 8 },
         { header: "Pentas", width: 1 },
       ];
