@@ -16,10 +16,10 @@ Before running the bot, make sure you have the following:
 - Discord bot token. You can create a bot and get the token from the [Discord Developer Portal](https://discord.com/developers/applications).
 - Riot developer API key.
 - Create a .env file and place your tokens in that file with the format of
-  DISCORD_TOKEN="YOUR_TOKEN"
-  RIOT_API_KEY="YOUR_TOKEN"
-  GUILD_ID="DISCORD_SERVER_ID"
-  CLIENT_ID="DISCORD_BOT_ID"
+  - DISCORD_TOKEN="YOUR_TOKEN"
+  - RIOT_API_KEY="YOUR_TOKEN"
+  - GUILD_ID="DISCORD_SERVER_ID"
+  - CLIENT_ID="DISCORD_BOT_ID"
 
 ## Running the bot
 
