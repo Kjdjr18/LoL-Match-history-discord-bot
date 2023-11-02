@@ -28,14 +28,20 @@ client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === "get_match_history") {
-    const user = interaction.options.getString("user");
-    const userChoiceName = commands[0].options[0].choices.find(
-      (choice) => choice.value === user
-    )?.name;
+    const customString = interaction.options.getString("summoner");
 
     try {
+      // First, fetch the user's summoner data to get the puuid
+      const summonerResponse = await axios.get(
+        `https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/${customString}`,
+        { headers: { "X-Riot-Token": RIOT_API_KEY } }
+      );
+
+      const userPuuid = summonerResponse.data.puuid;
+
+      // Now that you have the puuid, proceed to fetch the match history
       const response = await axios.get(
-        `https://${region}.api.riotgames.com/lol/match/v5/matches/by-puuid/${user}/ids?start=0&count=10`,
+        `https://${region}.api.riotgames.com/lol/match/v5/matches/by-puuid/${userPuuid}/ids?start=0&count=10`,
         { headers: { "X-Riot-Token": RIOT_API_KEY } }
       );
 
@@ -49,7 +55,7 @@ client.on("interactionCreate", async (interaction) => {
           const formattedTime = secondsToMinutesAndSeconds(totalSeconds);
           const gameMode = matchData.data.info.gameMode;
           const participant = matchData.data.info.participants.find(
-            (p) => p.puuid === user
+            (p) => p.puuid === userPuuid
           );
 
           if (participant) {
@@ -80,7 +86,7 @@ client.on("interactionCreate", async (interaction) => {
       const columns = [
         { header: "W/L", width: 3 },
         { header: "Game Mode", width: 10 },
-        { header: "Champion", width: 10 },
+        { header: "Champion", width: 11 },
         { header: "K/D/A", width: 8 },
         { header: "Damage", width: 8 },
         { header: "Duration", width: 6 },
@@ -109,15 +115,21 @@ client.on("interactionCreate", async (interaction) => {
 
       // Send a single response with the formatted match history
       await interaction.reply(
-        `Here is your match history for ${userChoiceName}:\n${formattedMatchHistory.join(
+        `Here is the match history for ${customString}:\n${formattedMatchHistory.join(
           "\n"
         )}`
       );
     } catch (error) {
-      console.error("Error fetching summoner data:", error);
-      await interaction.followUp(
-        "An error occurred while fetching summoner data."
-      );
+      if (error.response && error.response.status === 404) {
+        // The summoner name is not valid
+        await interaction.reply("Not a valid summoner name");
+      } else {
+        // Other error occurred
+        console.error("Error fetching summoner data:", error);
+        await interaction.followUp(
+          "An error occurred while fetching summoner data."
+        );
+      }
     }
   }
 });
