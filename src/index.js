@@ -16,6 +16,12 @@ const client = new Client({
   ],
 });
 
+function secondsToMinutesAndSeconds(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}`;
+}
+
 client.once("ready", () => console.log(`Logged in as ${client.user.tag}`));
 
 client.on("interactionCreate", async (interaction) => {
@@ -39,6 +45,8 @@ client.on("interactionCreate", async (interaction) => {
             `https://${region}.api.riotgames.com/lol/match/v5/matches/${matchId}`,
             { headers: { "X-Riot-Token": RIOT_API_KEY } }
           );
+          const totalSeconds = matchData.data.info.gameDuration;
+          const formattedTime = secondsToMinutesAndSeconds(totalSeconds);
           const gameMode = matchData.data.info.gameMode;
           const participant = matchData.data.info.participants.find(
             (p) => p.puuid === user
@@ -61,7 +69,7 @@ client.on("interactionCreate", async (interaction) => {
 
             const outcome = win ? "W" : "L";
 
-            return `${outcome}\t${gameMode}\t${championName}\t${kills}/${deaths}/${assists}\t${formattedDamageDealt}\t${pentaKills}`;
+            return `${outcome}\t${gameMode}\t${championName}\t${kills}/${deaths}/${assists}\t${formattedDamageDealt}\t${formattedTime}\t${pentaKills}`;
           }
 
           return null;
@@ -71,10 +79,11 @@ client.on("interactionCreate", async (interaction) => {
       // Define column headers and corresponding widths
       const columns = [
         { header: "W/L", width: 3 },
-        { header: "Mode", width: 5 },
+        { header: "Mode", width: 10 },
         { header: "Champion", width: 10 },
         { header: "K/D/A", width: 8 },
-        { header: "Damage Dealt", width: 12 },
+        { header: "Damage", width: 8 },
+        { header: "Time", width: 6 },
         { header: "Pentas", width: 1 },
       ];
 
