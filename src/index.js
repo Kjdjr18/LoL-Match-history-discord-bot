@@ -87,7 +87,7 @@ client.on("interactionCreate", async (interaction) => {
       const columns = [
         { header: "W/L", width: 3 },
         { header: "Game Mode", width: 10 },
-        { header: "Champion", width: 11 },
+        { header: "Champion", width: 12 },
         { header: "K/D/A", width: 8 },
         { header: "Damage", width: 8 },
         { header: "Duration", width: 8 },
@@ -116,7 +116,7 @@ client.on("interactionCreate", async (interaction) => {
 
       // Send a single response with the formatted match history
       await interaction.reply(
-        `Here is the match history for ${customString}:\n${formattedMatchHistory.join(
+        `Here is the match history, in descending order, for ${customString}:\n${formattedMatchHistory.join(
           "\n"
         )}`
       );
