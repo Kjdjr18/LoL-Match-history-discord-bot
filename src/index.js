@@ -116,7 +116,7 @@ client.on("interactionCreate", async (interaction) => {
 
       // Send a single response with the formatted match history
       await interaction.reply(
-        `Here is the match history, in descending order, for ${customString}:\n${formattedMatchHistory.join(
+        `Here is the match history, in descending order ↓, for ${customString}:\n${formattedMatchHistory.join(
           "\n"
         )}`
       );
