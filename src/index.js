@@ -1,11 +1,11 @@
-const { Client, IntentsBitField } = require("discord.js");
+const { Client, IntentsBitField, EmbedBuilder } = require("discord.js");
 const axios = require("axios");
 require("dotenv").config({ path: "../.env" });
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const RIOT_API_KEY = process.env.RIOT_API_KEY;
-const region1 = "na1"; //This is the region variable for before you have the puuid
-const region = "americas"; //This is the region variable for after you have the puuid
+const region1 = "na1"; // This is the region variable for before you have the puuid
+const region = "americas"; // This is the region variable for after you have the puuid
 
 const client = new Client({
   intents: [
@@ -74,57 +74,76 @@ client.on("interactionCreate", async (interaction) => {
               totalDamageDealtToChampions
             );
 
-            const outcome = win ? "W" : "L";
+            const outcome = win ? "Victory" : "Defeat";
 
-            return `${outcome}\t${gameMode}\t${championName}\t${kills}/${deaths}/${assists}\t${formattedDamageDealt}\t${formattedTime}\t${pentaKills}`;
+            return {
+              outcome,
+              gameMode,
+              championName,
+              kills,
+              deaths,
+              assists,
+              formattedDamageDealt,
+              formattedTime,
+              pentaKills,
+            };
           }
 
           return null;
         })
       );
 
-      // Define column headers and corresponding widths
-      const columns = [
-        { header: "W/L", width: 3 },
-        { header: "Game Mode", width: 10 },
-        { header: "Champion", width: 12 },
-        { header: "K/D/A", width: 8 },
-        { header: "Damage", width: 7 },
-        { header: "Duration", width: 8 },
-        { header: "Pentas", width: 1 },
-      ];
+      const validMatches = matchDetails.filter(Boolean);
 
-      // Calculate the separator length based on the total width of columns
-      const separatorLength = columns.reduce(
-        (total, col) => total + col.width,
-        10
-      );
+      if (validMatches.length === 0) {
+        await interaction.reply("No valid matches found for the summoner.");
+        return;
+      }
 
-      // Create the formatted table
-      const formattedMatchHistory = [
-        "```",
-        columns.map((col) => col.header.padEnd(col.width)).join(" "),
-        "-".repeat(separatorLength),
-        ...matchDetails.filter(Boolean).map((row) => {
-          const values = row.split("\t");
-          return columns
-            .map((col, index) => values[index].padEnd(col.width))
-            .join(" ");
-        }),
-        "```",
-      ];
+      const matchEmbeds = validMatches.map((match) => {
+        const {
+          outcome,
+          gameMode,
+          championName,
+          kills,
+          deaths,
+          assists,
+          formattedDamageDealt,
+          formattedTime,
+          pentaKills,
+        } = match;
 
-      // Send a single response with the formatted match history
-      await interaction.reply(
-        `Here is the match history, in descending order ↓, for ${customString}:\n${formattedMatchHistory.join(
-          "\n"
-        )}`
-      );
+        const matchEmbed = new EmbedBuilder()
+          .setTitle(`${outcome} - ${gameMode}`)
+          .setColor(outcome === "Victory" ? "#00FF00" : "#FF0000")
+          .addFields(
+            { name: "CHAMPION", value: championName, inline: true },
+            {
+              name: "K/D/A",
+              value: `${kills}/${deaths}/${assists}`,
+              inline: true,
+            },
+            { name: "DAMAGE", value: formattedDamageDealt, inline: true },
+            { name: "DURATION", value: formattedTime, inline: true },
+            { name: "PENTAS", value: pentaKills || "0", inline: true }
+          );
+
+        return matchEmbed;
+      });
+
+      const message = `Here is your match history for: ${customString}`;
+
+      // Send the message before the match embeds
+      await interaction.reply({ content: message, embeds: matchEmbeds });
     } catch (error) {
       if (error.response) {
         if (error.response.status === 404) {
           // The summoner name is not valid
           await interaction.reply("Not a valid summoner name");
+        } else if (error.response.status === 401) {
+          // The API key is invalid
+          console.error("Invalid API key:", error);
+          await interaction.reply("Invalid API key");
         } else {
           // Handle other errors gracefully, you might want to log these
           console.error("Error fetching summoner data:", error);
