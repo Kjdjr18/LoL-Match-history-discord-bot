@@ -42,7 +42,7 @@ client.on("interactionCreate", async (interaction) => {
       const userPuuid = summonerResponse.data.puuid;
 
       const response = await axios.get(
-        `https://${region}.api.riotgames.com/lol/match/v5/matches/by-puuid/${userPuuid}/ids?start=0&count=10`,
+        `https://${region}.api.riotgames.com/lol/match/v5/matches/by-puuid/${userPuuid}/ids?start=0&count=5`,
         { headers: { "X-Riot-Token": RIOT_API_KEY } }
       );
 
@@ -113,6 +113,10 @@ client.on("interactionCreate", async (interaction) => {
           pentaKills,
         } = match;
 
+        // Ensure formattedTime and pentaKills are strings
+        const formattedTimeString = formattedTime.toString();
+        const pentaKillsString = pentaKills.toString();
+
         const matchEmbed = new EmbedBuilder()
           .setTitle(`${outcome} - ${gameMode}`)
           .setColor(outcome === "Victory" ? "#00FF00" : "#FF0000")
@@ -124,17 +128,25 @@ client.on("interactionCreate", async (interaction) => {
               inline: true,
             },
             { name: "DAMAGE", value: formattedDamageDealt, inline: true },
-            { name: "DURATION", value: formattedTime, inline: true },
-            { name: "PENTAS", value: pentaKills || "0", inline: true }
+            { name: "DURATION", value: formattedTimeString, inline: true },
+            { name: "PENTAS", value: pentaKillsString || "0", inline: true }
           );
 
         return matchEmbed;
       });
 
-      const message = `Here is your match history for: ${customString}`;
+      const message = `Here is your match history for ${customString}\nMost recent on top ↓\n[Click here for more details](https://u.gg/lol/profile/na1/${customString}/overview)`;
 
-      // Send the message before the match embeds
-      await interaction.reply({ content: message, embeds: matchEmbeds });
+      // Set the URL for the entire message by including it in the `content`
+      const messageOptions = {
+        content: message,
+        embeds: matchEmbeds,
+        components: [], // Optionally, add message components here
+        allowedMentions: { parse: [] }, // Adjust mentions as needed
+      };
+
+      // Send the message with all the match embeds and the clickable URL
+      await interaction.reply(messageOptions);
     } catch (error) {
       if (error.response) {
         if (error.response.status === 404) {
