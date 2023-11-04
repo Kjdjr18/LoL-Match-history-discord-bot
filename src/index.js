@@ -4,8 +4,12 @@ require("dotenv").config({ path: "../.env" });
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const RIOT_API_KEY = process.env.RIOT_API_KEY;
-const region1 = "na1"; // This is the region variable for before you have the puuid
-const region = "americas"; // This is the region variable for after you have the puuid
+
+// Constants for Riot API URLs
+const RIOT_API_URLS = {
+  SUMMONER: "https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/",
+  MATCH: "https://americas.api.riotgames.com/lol/match/v5/matches/",
+};
 
 const client = new Client({
   intents: [
@@ -16,6 +20,34 @@ const client = new Client({
   ],
 });
 
+async function getSummonerData(summonerName) {
+  const url = `https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/${summonerName}`;
+  const response = await axios.get(url, {
+    headers: { "X-Riot-Token": RIOT_API_KEY },
+  });
+  return response.data;
+}
+
+async function getMatchDetails(userPuuid) {
+  const url = `https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/${userPuuid}/ids?start=0&count=5`;
+  const response = await axios.get(url, {
+    headers: { "X-Riot-Token": RIOT_API_KEY },
+  });
+  return response.data;
+}
+
+// Helper function to format match date
+function formatMatchDate(unixTime) {
+  const date = new Date(unixTime);
+  const options = {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "UTC",
+  };
+  return date.toLocaleString("en-US", options);
+}
+
 // Helper function to convert seconds to MM:SS format
 function secondsToMinutesAndSeconds(seconds) {
   const minutes = Math.floor(seconds / 60);
@@ -23,9 +55,23 @@ function secondsToMinutesAndSeconds(seconds) {
   return `${minutes}:${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}`;
 }
 
-client.once("ready", () => {
-  console.log(`Logged in as ${client.user.tag}`);
-});
+// Handle errors gracefully
+function handleErrors(interaction, error) {
+  if (error.response) {
+    if (error.response.status === 404) {
+      interaction.reply("Not a valid summoner name");
+    } else if (error.response.status === 401) {
+      console.error("Invalid API key:", error);
+      interaction.reply("Invalid API key");
+    } else {
+      console.error("Error fetching summoner data:", error);
+      interaction.followUp("An error occurred while fetching summoner data.");
+    }
+  } else {
+    console.error("Network error:", error);
+    interaction.followUp("A network error occurred. Please try again later.");
+  }
+}
 
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
@@ -34,27 +80,22 @@ client.on("interactionCreate", async (interaction) => {
     const customString = interaction.options.getString("summoner");
 
     try {
-      const summonerResponse = await axios.get(
-        `https://${region1}.api.riotgames.com/lol/summoner/v4/summoners/by-name/${customString}`,
-        { headers: { "X-Riot-Token": RIOT_API_KEY } }
-      );
-
-      const userPuuid = summonerResponse.data.puuid;
-
-      const response = await axios.get(
-        `https://${region}.api.riotgames.com/lol/match/v5/matches/by-puuid/${userPuuid}/ids?start=0&count=5`,
-        { headers: { "X-Riot-Token": RIOT_API_KEY } }
-      );
+      const summonerData = await getSummonerData(customString);
+      const userPuuid = summonerData.puuid;
+      const matchIds = await getMatchDetails(userPuuid);
 
       const matchDetails = await Promise.all(
-        response.data.map(async (matchId) => {
+        matchIds.map(async (matchId) => {
           const matchData = await axios.get(
-            `https://${region}.api.riotgames.com/lol/match/v5/matches/${matchId}`,
+            `https://americas.api.riotgames.com/lol/match/v5/matches/${matchId}`,
             { headers: { "X-Riot-Token": RIOT_API_KEY } }
           );
+
           const totalSeconds = matchData.data.info.gameDuration;
           const formattedTime = secondsToMinutesAndSeconds(totalSeconds);
+          const date = formatMatchDate(matchData.data.info.gameCreation);
           const gameMode = matchData.data.info.gameMode;
+
           const participant = matchData.data.info.participants.find(
             (p) => p.puuid === userPuuid
           );
@@ -86,6 +127,7 @@ client.on("interactionCreate", async (interaction) => {
               formattedDamageDealt,
               formattedTime,
               pentaKills,
+              date,
             };
           }
 
@@ -96,7 +138,7 @@ client.on("interactionCreate", async (interaction) => {
       const validMatches = matchDetails.filter(Boolean);
 
       if (validMatches.length === 0) {
-        await interaction.reply("No valid matches found for the summoner.");
+        interaction.reply("No valid matches found for the summoner.");
         return;
       }
 
@@ -111,6 +153,7 @@ client.on("interactionCreate", async (interaction) => {
           formattedDamageDealt,
           formattedTime,
           pentaKills,
+          date,
         } = match;
 
         // Ensure formattedTime and pentaKills are strings
@@ -128,6 +171,7 @@ client.on("interactionCreate", async (interaction) => {
               inline: true,
             },
             { name: "DAMAGE", value: formattedDamageDealt, inline: true },
+            { name: "DATE", value: date, inline: true },
             { name: "DURATION", value: formattedTimeString, inline: true },
             { name: "PENTAS", value: pentaKillsString || "0", inline: true }
           );
@@ -148,30 +192,13 @@ client.on("interactionCreate", async (interaction) => {
       // Send the message with all the match embeds and the clickable URL
       await interaction.reply(messageOptions);
     } catch (error) {
-      if (error.response) {
-        if (error.response.status === 404) {
-          // The summoner name is not valid
-          await interaction.reply("Not a valid summoner name");
-        } else if (error.response.status === 401) {
-          // The API key is invalid
-          console.error("Invalid API key:", error);
-          await interaction.reply("Invalid API key");
-        } else {
-          // Handle other errors gracefully, you might want to log these
-          console.error("Error fetching summoner data:", error);
-          await interaction.followUp(
-            "An error occurred while fetching summoner data."
-          );
-        }
-      } else {
-        // Handle network errors, for example, when Riot API is down
-        console.error("Network error:", error);
-        await interaction.followUp(
-          "A network error occurred. Please try again later."
-        );
-      }
+      handleErrors(interaction, error);
     }
   }
+});
+
+client.once("ready", () => {
+  console.log(`Logged in as ${client.user.tag}`);
 });
 
 client.login(DISCORD_TOKEN);
