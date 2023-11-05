@@ -128,7 +128,9 @@ client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === "get_match_history") {
-    const customString = interaction.options.getString("summoner");
+    const summonerName = interaction.options.getString("summoner");
+    // Remove whitespace from summoner name
+    const customString = summonerName.replace(/\s/g, "");
 
     try {
       // Get summoner data
