@@ -247,7 +247,7 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       // Create a message with the match history and a clickable URL
-      const message = `Here is your match history for ${customString}\nMost recent on top ↓\n[Click here for more details](https://u.gg/lol/profile/na1/${customString}/overview)`;
+      const message = `Here is your match history for ${summonerName}\nMost recent on top ↓\n[Click here for more details](https://u.gg/lol/profile/na1/${customString}/overview)`;
 
       // Set the URL for the entire message by including it in the `content`
       const messageOptions = {
